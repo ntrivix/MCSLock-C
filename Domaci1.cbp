@@ -14,6 +14,9 @@
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
+				<Linker>
+					<Add library="D:/Documents/Projects/Raf/Kids/Domaci1/librafkids_dom1_win_fix.a" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/Domaci1" prefix_auto="1" extension_auto="1" />

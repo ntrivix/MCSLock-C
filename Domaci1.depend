@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1521156245 source:d:\documents\projects\raf\kids\domaci1\main.c
+1521467915 source:d:\documents\projects\raf\kids\domaci1\main.c
 	<stdio.h>
 	<stdlib.h>
 	"domaci1.h"

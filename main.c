@@ -15,47 +15,42 @@ typedef struct node
 node* pok = NULL;
 
 int lock_n_threads_with_timeout(int id, int* local, double timeout) {
-    double startTime = lrk_get_time();
-
     node* newNode = malloc(sizeof(node));
     local[0] = newNode;
     newNode->status = 1;
-    newNode->startTime = startTime;
+    newNode->next  = NULL;
+    newNode->startTime = lrk_get_time();
     newNode->timeout = timeout;
     node* prevNode = (node*)lrk_get_and_set((int*)&pok, (int)newNode);
 
     if (prevNode != NULL) {
         prevNode->next = newNode;
     } else {
-        //proveriti da li je tajmoutova
         newNode->status = 0;
         if (isNodeTimeout(newNode)) {
             if (lrk_compare_and_set(&(newNode->status), 0, 2))
-                    propagateUnlock(newNode);
-            if (newNode->status == 2)
-                    return 0;
+            //newNode->status = 2;
+                //Bio je nula, postavio sam na dvojku - propagiraj nulu
+                propagateUnlock(newNode);
+            return 0;
         }
     }
     while ( newNode->status == 1 ){
         if (isNodeTimeout(newNode)) {
             //ako je kroz propagate status promenjen na 0
             if (!lrk_compare_and_set(&(newNode->status), 1, 2)) {
-                if (newNode->status == 2)
-                    return 0;
-                break;
+                if (newNode->status == 0)
+                    propagateUnlock(newNode);
             }
             return 0;
         }
-        lrk_sleep(1);
+        lrk_sleep(0);
     };
     if (isNodeTimeout(newNode)) {
-        //ovooo
-        //sta ako je setovano na 0
+        //ako sam ja nula i ako sam tajmautovao potrebno je da propagiram nulu
+        //pre nego sto vtatim 0
         if (newNode->status == 0){
-            
-            // Ovo mozda treba if (newNode->next != NULL) {
             propagateUnlock(newNode);
-         
         }
         return 0;
     }
@@ -79,8 +74,9 @@ void propagateUnlock(node* tNode) {
             //drugi tred postavio pok na sebe
             if (!success){
                 //cekaj da taj tred sebe postavi kao next
-                while (nextNode == NULL)
-                    lrk_sleep(1);
+                while (tNode->next == NULL)
+                    lrk_sleep(0);
+                nextNode = tNode->next;
                 //unlokuj ili tajmotuj sledeceg
                 unlockOrTimeoutNode(nextNode);
             }
@@ -103,7 +99,7 @@ int isNodeTimeout(node* tNode) {
 * Ako je node jos uvek na 1, a nije tajmoutovao, tajmoutuj ga.
 * Pokušaj da unlokuješ node ako nije tajmoutovao
 *
-*Vraca 0 ako je node unlokovan, a 2 ako je tajmoutovan 
+*Vraca 0 ako je node unlokovan, a 2 ako je tajmoutovan
 */
 int unlockOrTimeoutNode(node* tNode) {
     int success;
@@ -112,14 +108,11 @@ int unlockOrTimeoutNode(node* tNode) {
         if (success)
             return 2;
         return 0;
-        // Da li je moguce da ovde fejluje i da je tNode->status == 0 i sta se onda desava
     } else {
         success = lrk_compare_and_set(&(tNode->status), 1, 0);
         if (success)
             return 0;
         return 2;
-        // Da li je moguce da ovde fejluje i sta ako je fejlovao, a
-        //tNode->status == 2
     }
 }
 
@@ -130,35 +123,6 @@ void unlock_n_threads_with_timeout(int id, int* local) {
 
 int main()
 {
-
-    /*
-    node* node1 = malloc(sizeof(node));
-    node1->status = 10;
-    int* nodeAdr = (int*)&node1;
-
-    node* node3 = malloc(sizeof(node));
-    node3->status = 55;
-
-    int node3Adr = (int)node3;
-    *nodeAdr = node3Adr;
-    node* test = (node*)(*nodeAdr);
-
-
-    printf("%d\n", test->status);
-    */
-/*
-    node* node1 = NULL;
-    //node1->status = 10;
-
-    node* node3 = malloc(sizeof(node));
-    node3->status = 55;
-
-    node* prevNode = (node*)lrk_get_and_set((int*)&node1, (int)node3);
-    if (prevNode == NULL)
-        printf("NULL\n");
-    //printf("%d\n", prevNode->status);
-    printf("%d\n", node1->status);
-    */
-    start_timeout_mutex_n_threads_test(0.05f);
+    start_timeout_mutex_n_threads_test(0.005f);
     return 0;
 }
